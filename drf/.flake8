@@ -4,4 +4,4 @@ exclude =
     __pycache__,
     manage.py,
     settings.py
-ignore = F401 # F401 = imported but unused, 개발단에서 일단 ignore
+ignore = F401 

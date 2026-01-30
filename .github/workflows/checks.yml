@@ -15,8 +15,21 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Checkout # github -> ubuntu로 코드 가져오기 (로컬이 아니기때문에 가져와야함)
         uses: actions/checkout@v2
+      - name: Create dummy env for CI
+        run: |
+          mkdir -p drf
+          cat <<EOF > drf/.env
+          DJANGO_SECRET_KEY=test
+          POSTGRES_DB=test
+          POSTGRES_USER=test
+          POSTGRES_PASSWORD=test
+          POSTGRES_HOST=db
+          DJANGO_ALLOWED_HOSTS=test
+          DOCKERHUB_USER=test
+          DOCKERHUB_TOKEN=test
+          EOF
       - name: Test
-        run: ENV_FILE= docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
+        run: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
       - name: Lint
         run: docker compose run --rm app sh -c "flake8 --config=app/.flake8"
 

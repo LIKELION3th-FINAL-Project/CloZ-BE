@@ -28,8 +28,12 @@ jobs:
           DOCKERHUB_USER=test
           DOCKERHUB_TOKEN=test
           EOF
+      - name: Build app image (dev)
+        run: docker compose build --build-arg DEV=true app
+
       - name: Test
         run: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
+
       - name: Lint
         run: docker compose run --rm app flake8 --config=/app/.flake8
         

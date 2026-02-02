@@ -1,0 +1,45 @@
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: drf/Dockerfile
+    expose:
+      - "8000"
+    volumes:
+      - ./drf:/app
+    env_file:
+      - ./drf/.env
+    depends_on:
+      - db
+      - redis
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000"
+      
+  db:
+    image: postgres:15
+    restart: always
+    env_file:
+      - ./drf/.env
+    ports:
+      - "5432:5432"  
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"   
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app
+
+
+volumes:
+  postgres-data:

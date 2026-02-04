@@ -49,7 +49,8 @@ class UserStyle(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name="user_s
+        related_name="user_styles"
+    )
     style = models.ForeignKey(
         Style,
         on_delete=models.CASCADE

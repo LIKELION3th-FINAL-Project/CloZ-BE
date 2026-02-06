@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "payment",
     "product",
     "user",
+    'corsheaders', # CORS 설정
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,6 +50,8 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "user.User"
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # CORS 설정
+    'django.middleware.common.CommonMiddleware', # CORS 설정
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -150,3 +153,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Toss Payments
 TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")
 TOSS_CLIENT_KEY = os.getenv("TOSS_CLIENT_KEY")
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Vite 개발 서버
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",  
+    "http://127.0.0.1:5174",
+]
+

@@ -1,49 +1,59 @@
 import csv
+from pathlib import Path
 
 from django.core.management.base import BaseCommand
-from pathlib import PureWindowsPath
-from product.models import Product
 from django.db import transaction
 
+from product.models import Product
+
+
 class Command(BaseCommand):
-    help = "Import products from CSV"
+    help = "Import products from CSV (havati dataset)"
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--csv",
             type=str,
             required=True,
-            help="CSV file path"
+            help="CSV file path (e.g. data/products.csv)"
+        )
+        parser.add_argument(
+            "--image-root",
+            type=str,
+            default="havati_products",
+            help="Image root directory name inside data/"
         )
 
     @transaction.atomic
     def handle(self, *args, **options):
-        csv_path = options["csv"]
+        csv_path = Path(options["csv"])
+        image_root = options["image_root"]
 
         products = []
 
-        with open(csv_path, newline="", encoding="utf-8-sig") as csvfile:
+        with csv_path.open(newline="", encoding="utf-8-sig") as csvfile:
             reader = csv.DictReader(csvfile)
 
             for row in reader:
-                # 이미지 경로 전처리 (절대경로 제거)
-                raw_path = row["product_image_path"]
-                win_path = PureWindowsPath(raw_path)
-                parts = win_path.parts
+                # price: "548,000" -> 548000
+                price = int(row["price"].replace(",", ""))
 
-                idx = parts.index("musinsa_images")
-                relative_path = "/".join(parts[idx:])
+                # image_file 예: havati_products/OUTER/Jacket_Blouson/xxx.jpg
+                image_path = row["image_file"]
 
-                image_path = relative_path
+                # 혹시 image_file에 앞 경로가 더 붙어와도 대비
+                if image_root in image_path:
+                    image_path = image_path.split(image_root, 1)[1].lstrip("/")
+                    image_path = f"{image_root}/{image_path}"
 
                 products.append(
                     Product(
-                        product_name=row["product_name"],
+                        product_name=row["name"],
                         brand=row["brand"],
-                        category_main=row["category_main"],
-                        category_sub=row["category_sub"],
-                        product_url=row["product_url"],
-                        price=row["price"],
+                        category_main=row["main_category"],
+                        category_sub=row["sub_category"],
+                        product_url=row["url"],
+                        price=price,
                         product_image_path=image_path,
                     )
                 )

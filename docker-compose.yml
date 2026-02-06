@@ -8,7 +8,7 @@ services:
     volumes:
       - ./drf:/app
       - ./data:/app/data
-      - ./data/musinsa_images:/app/media/musinsa_images
+      - ./data/havati_products:/app/media/havati_products
     env_file:
       - ./drf/.env
     depends_on:
@@ -38,7 +38,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./data/musinsa_images:/app/media/musinsa_images
+      - ./data/havati_products:/app/media/havati_products
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - app

@@ -27,10 +27,12 @@ class ProductByCategoryView(APIView):
     def get(self, request, category):
         offset = int(request.query_params.get("offset", 0))
         limit = int(request.query_params.get("limit", 20))
+        category_sub = request.query_params.get("category_sub", None)
 
-        qs = Product.objects.filter(
-            Q(category_main=category) | Q(category_sub=category)
-        ).order_by("-created_at")
+        qs = Product.objects.filter(category_main=category).order_by("-created_at")
+
+        if category_sub:
+            qs = qs.filter(category_sub__iexact=category_sub)
 
         sliced = qs[offset: offset + limit]
         serializer = ProductListSerializer(sliced, many=True)

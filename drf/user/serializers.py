@@ -97,6 +97,48 @@ class MyPageSerializer(serializers.ModelSerializer):
         )
 
 
+class MyPageUpdateSerializer(serializers.ModelSerializer):
+    styles = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "nickname",
+            "profile_image",
+            "height",
+            "weight",
+            "gender",
+            "styles",
+        ]
+
+    def validate_styles(self, value):
+        if value and not (1 <= len(value) <= 3):
+            raise serializers.ValidationError(
+                "styles는 1~3개 선택해야 합니다."
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        styles = validated_data.pop("styles", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if styles is not None:
+            instance.user_styles.all().delete()
+            style_objs = Style.objects.filter(name__in=styles)
+            UserStyle.objects.bulk_create(
+                [UserStyle(user=instance, style=s)
+                 for s in style_objs]
+            )
+
+        return instance
+
+
 class AddressCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address

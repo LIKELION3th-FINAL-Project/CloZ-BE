@@ -10,6 +10,7 @@ from .serializers import (
     SignupSerializer,
     LoginSerializer,
     MyPageSerializer,
+    MyPageUpdateSerializer,
     AddressCreateSerializer,
     AddressUpdateSerializer,
 )
@@ -111,6 +112,20 @@ class MyPageView(APIView):
     def get(self, request):
         serializer = MyPageSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        serializer = MyPageUpdateSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            MyPageSerializer(request.user).data,
+            status=status.HTTP_200_OK,
+        )
 
 
 class AddressCreateView(APIView):

@@ -6,6 +6,7 @@ class CartItemSerializer(serializers.ModelSerializer):
     product_id = serializers.IntegerField(source="product.id")
     product_name = serializers.CharField(source="product.product_name")
     price = serializers.IntegerField(source="product.price")
+    image_url = serializers.CharField(source="product.image_url")
 
     class Meta:
         model = CartItem
@@ -14,6 +15,7 @@ class CartItemSerializer(serializers.ModelSerializer):
             "product_name",
             "price",
             "quantity",
+            "image_url",
         ]
 
 

@@ -42,7 +42,7 @@ class ProductByCategoryView(APIView):
             "limit": limit,
             "products": serializer.data,
         })
-
+        
 # 상품 검색 (PostgreSQL Full-Text)
 class ProductSearchView(APIView):
     def get(self, request):

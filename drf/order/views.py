@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from .models import Order, OrderItem
 from .serializers import OrderCreateSerializer, OrderReadSerializer
 from product.models import Product
+from cart.models import CartItem
 
 
 class OrderView(generics.GenericAPIView):
@@ -37,6 +38,13 @@ class OrderView(generics.GenericAPIView):
                 quantity=item["quantity"],
             )
 
+        # 주문한 상품을 장바구니에서 제거
+        product_ids = [item["product_id"] for item in items]
+        CartItem.objects.filter(
+            cart__user=request.user,
+            product_id__in=product_ids,
+        ).delete()
+
         return Response(
             {
                 "order_id": order.id,
@@ -47,9 +55,12 @@ class OrderView(generics.GenericAPIView):
 
     # GET /api/orders/  → 주문 목록 조회
     def get(self, request):
-        orders = Order.objects.filter(
-            user=request.user
-        ).order_by("-created_at")
+        orders = (
+            Order.objects
+            .filter(user=request.user)
+            .prefetch_related("items__product")
+            .order_by("-created_at")
+        )
 
         serializer = OrderReadSerializer(orders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

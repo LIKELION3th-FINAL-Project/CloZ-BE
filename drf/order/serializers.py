@@ -13,16 +13,29 @@ class OrderCreateSerializer(serializers.Serializer):
 
 
 class OrderItemReadSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source="product.product_name")
+    product_name = serializers.CharField(
+        source="product.product_name"
+    )
+    brand = serializers.CharField(source="product.brand")
+    image_url = serializers.CharField(
+        source="product.product_image_path"
+    )
 
     class Meta:
         model = OrderItem
-        fields = ["product_name", "price", "quantity"]
+        fields = [
+            "product_name",
+            "brand",
+            "price",
+            "quantity",
+            "image_url",
+        ]
 
 
 class OrderReadSerializer(serializers.ModelSerializer):
     total_price = serializers.SerializerMethodField()
     total_quantity = serializers.SerializerMethodField()
+    items = OrderItemReadSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -32,6 +45,7 @@ class OrderReadSerializer(serializers.ModelSerializer):
             "total_price",
             "total_quantity",
             "created_at",
+            "items",
         ]
 
     def get_total_price(self, obj):

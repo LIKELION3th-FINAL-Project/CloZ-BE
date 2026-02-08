@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from . models import Address
+from .models import Address
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -16,15 +16,19 @@ from .serializers import (
 
 User = get_user_model()
 
+
 def issue_token(user):
     refresh = RefreshToken.for_user(user)
     return str(refresh.access_token)
+
 
 class SignupView(APIView):
     permission_classes = []
 
     def post(self, request):
-        if User.objects.filter(login_id=request.data.get("login_id")).exists():
+        if User.objects.filter(
+            login_id=request.data.get("login_id")
+        ).exists():
             return Response(
                 {"message": "이미 존재하는 사용자입니다."},
                 status=status.HTTP_409_CONFLICT
@@ -45,6 +49,7 @@ class SignupView(APIView):
             status=status.HTTP_201_CREATED
         )
 
+
 class LoginView(APIView):
     permission_classes = []
 
@@ -64,6 +69,7 @@ class LoginView(APIView):
             status=status.HTTP_200_OK
         )
 
+
 class SocialSignupView(APIView):
     permission_classes = []
 
@@ -81,7 +87,9 @@ class SocialSignupView(APIView):
                 "height": request.data.get("height"),
                 "weight": request.data.get("weight"),
                 "gender": request.data.get("gender"),
-                "profile_image": request.data.get("profile_image", ""),
+                "profile_image": request.data.get(
+                    "profile_image", ""
+                ),
             }
         )
 
@@ -96,13 +104,15 @@ class SocialSignupView(APIView):
             status=status.HTTP_200_OK
         )
 
+
 class MyPageView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = MyPageSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+
 class AddressCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -121,6 +131,7 @@ class AddressCreateView(APIView):
             },
             status=status.HTTP_201_CREATED
         )
+
 
 class AddressUpdateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -149,4 +160,3 @@ class AddressUpdateView(APIView):
             {"message": "updated"},
             status=status.HTTP_200_OK
         )
-

@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
+
 class UserManager(BaseUserManager):
     def create_user(self, login_id, password=None, **extra_fields):
         if not login_id:
@@ -15,6 +16,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         return self.create_user(login_id, password, **extra_fields)
+
 
 class User(AbstractUser):
     username = None
@@ -37,14 +39,16 @@ class User(AbstractUser):
     USERNAME_FIELD = "login_id"
     REQUIRED_FIELDS = []
 
-    objects=UserManager()
+    objects = UserManager()
+
 
 class Style(models.Model):
     name = models.CharField(max_length=20, unique=True)
 
     def __str__(self):
         return self.name
-    
+
+
 class UserStyle(models.Model):
     user = models.ForeignKey(
         User,
@@ -59,6 +63,7 @@ class UserStyle(models.Model):
     class Meta:
         unique_together = ("user", "style")
 
+
 class Address(models.Model):
     user = models.ForeignKey(
         User,
@@ -69,4 +74,3 @@ class Address(models.Model):
     phone = models.CharField(max_length=20)
     address = models.TextField()
     is_default = models.BooleanField(default=False)
-

@@ -5,7 +5,9 @@ User = settings.AUTH_USER_MODEL
 
 
 class Cart(models.Model):
-    user = models.OneToOneField(User,on_delete=models.CASCADE, related_name="cart")
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="cart"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -13,9 +15,13 @@ class Cart(models.Model):
 
 
 class CartItem(models.Model):
-    cart = models.ForeignKey(Cart,on_delete=models.CASCADE,related_name="items")
-    user = models.ForeignKey(User,on_delete=models.CASCADE)
-    product = models.ForeignKey("product.Product",on_delete=models.CASCADE)
+    cart = models.ForeignKey(
+        Cart, on_delete=models.CASCADE, related_name="items"
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(
+        "product.Product", on_delete=models.CASCADE
+    )
     quantity = models.PositiveIntegerField(default=1)
 
     class Meta:

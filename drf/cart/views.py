@@ -20,6 +20,7 @@ class CartView(APIView):
         serializer = CartSerializer(cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class CartItemView(APIView):
     permission_classes = [IsAuthenticated]
 

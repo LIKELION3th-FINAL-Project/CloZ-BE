@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Payment(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING"     # 결제 대기
@@ -12,15 +13,20 @@ class Payment(models.Model):
         on_delete=models.CASCADE,
         related_name="payment"
     )
-    payment_key = models.CharField(max_length=200, unique=True, null=True, blank=True)
+    payment_key = models.CharField(
+        max_length=200, unique=True, null=True, blank=True
+    )
     price = models.IntegerField()  # 결제 금액
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.PENDING
     )
-    created_at = models.DateTimeField(auto_now_add=True)  # 결제 요청 시각
-    paid_at = models.DateTimeField(null=True, blank=True)  # 결제 완료 시각
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return f"Payment {self.id} - Order {self.order_id} - {self.status}"
+        return (
+            f"Payment {self.id} - "
+            f"Order {self.order_id} - {self.status}"
+        )

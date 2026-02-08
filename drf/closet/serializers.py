@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Closet
 
+
 class ClosetListSerializer(serializers.ModelSerializer):
     category = serializers.CharField(source="get_category_display")
 
@@ -12,6 +13,8 @@ class ClosetListSerializer(serializers.ModelSerializer):
             "image_url",
             "created_at",
         ]
+
+
 class ClosetCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Closet

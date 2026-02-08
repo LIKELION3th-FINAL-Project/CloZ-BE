@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Order, OrderItem
 from product.models import Product
 
+
 class OrderItemCreateSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     quantity = serializers.IntegerField(min_value=1)

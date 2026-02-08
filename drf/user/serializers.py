@@ -6,6 +6,7 @@ from .models import Style, UserStyle, Address
 
 User = get_user_model()
 
+
 class SignupSerializer(serializers.ModelSerializer):
     styles = serializers.ListField(
         child=serializers.CharField(),
@@ -30,7 +31,9 @@ class SignupSerializer(serializers.ModelSerializer):
 
     def validate_styles(self, value):
         if not (1 <= len(value) <= 3):
-            raise serializers.ValidationError("styles는 1~3개 선택해야 합니다.")
+            raise serializers.ValidationError(
+                "styles는 1~3개 선택해야 합니다."
+            )
         return value
 
     def create(self, validated_data):
@@ -52,6 +55,8 @@ class SignupSerializer(serializers.ModelSerializer):
         )
 
         return user
+
+
 class LoginSerializer(serializers.Serializer):
     login_id = serializers.EmailField()
     password = serializers.CharField(write_only=True)
@@ -63,9 +68,12 @@ class LoginSerializer(serializers.Serializer):
             password=data["password"]
         )
         if not user:
-            raise serializers.ValidationError("이메일 또는 비밀번호가 올바르지 않습니다.")
+            raise serializers.ValidationError(
+                "이메일 또는 비밀번호가 올바르지 않습니다."
+            )
         data["user"] = user
         return data
+
 
 class MyPageSerializer(serializers.ModelSerializer):
     styles = serializers.SerializerMethodField()
@@ -87,6 +95,7 @@ class MyPageSerializer(serializers.ModelSerializer):
             obj.user_styles.select_related("style")
             .values_list("style__name", flat=True)
         )
+
 
 class AddressCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -112,6 +121,7 @@ class AddressCreateSerializer(serializers.ModelSerializer):
             user=user,
             **validated_data
         )
+
 
 class AddressUpdateSerializer(serializers.ModelSerializer):
     class Meta:

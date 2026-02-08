@@ -6,13 +6,17 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Closet
 from .serializers import ClosetListSerializer, ClosetCreateSerializer
 
+
 class ClosetListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qs = Closet.objects.filter(user=request.user).order_by("-created_at")
+        qs = Closet.objects.filter(
+            user=request.user
+        ).order_by("-created_at")
         serializer = ClosetListSerializer(qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class ClosetCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -29,6 +33,7 @@ class ClosetCreateView(APIView):
             {"message": "added"},
             status=status.HTTP_201_CREATED
         )
+
 
 class ClosetDeleteView(APIView):
     permission_classes = [IsAuthenticated]

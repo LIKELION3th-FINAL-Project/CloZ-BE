@@ -53,7 +53,10 @@ class PaymentPrepareView(generics.GenericAPIView):
             "price": payment.price,
         })
 
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class PaymentConfirmView(generics.GenericAPIView):
@@ -63,7 +66,7 @@ class PaymentConfirmView(generics.GenericAPIView):
     @transaction.atomic
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
-        
+
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
@@ -74,16 +77,6 @@ class PaymentConfirmView(generics.GenericAPIView):
 
         payment = serializer.validated_data["payment"]
         order = serializer.validated_data["order"]
-
-        # TODO: 실제 환경에서는 Toss API로 결제 승인 요청
-        # import requests
-        # toss_response = requests.post(
-        #     "https://api.tosspayments.com/v1/payments/confirm",
-        #     headers={"Authorization": f"Basic {TOSS_SECRET_KEY}"},
-        #     json={"paymentKey": payment.payment_key, "orderId": order.id, "amount": payment.price}
-        # )
-        # if toss_response.status_code != 200:
-        #     return Response({"message": "Toss 결제 실패"}, status=400)
 
         # Payment 상태 업데이트
         payment.status = Payment.Status.PAID
@@ -98,7 +91,10 @@ class PaymentConfirmView(generics.GenericAPIView):
             "status": payment.status,
         })
 
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
+        )
 
 
 class PaymentListView(generics.ListAPIView):
@@ -106,6 +102,9 @@ class PaymentListView(generics.ListAPIView):
     serializer_class = PaymentListSerializer
 
     def get_queryset(self):
-        return Payment.objects.filter(
-            order__user=self.request.user
-        ).select_related("order").order_by("-created_at")
+        return (
+            Payment.objects
+            .filter(order__user=self.request.user)
+            .select_related("order")
+            .order_by("-created_at")
+        )

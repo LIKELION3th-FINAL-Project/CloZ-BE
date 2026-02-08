@@ -4,6 +4,7 @@ from .models import Closet
 
 class ClosetListSerializer(serializers.ModelSerializer):
     category = serializers.CharField(source="get_category_display")
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Closet
@@ -14,13 +15,19 @@ class ClosetListSerializer(serializers.ModelSerializer):
             "created_at",
         ]
 
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
+
 
 class ClosetCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Closet
         fields = [
             "category",
-            "image_url",
+            "image",
         ]
 
     def create(self, validated_data):

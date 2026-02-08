@@ -20,7 +20,9 @@ COPY ./drf /app
 
 ENV PATH="/py/bin:$PATH"
 
-RUN adduser --disabled-password --gecos "" django-user
+RUN adduser --disabled-password --gecos "" django-user && \
+    mkdir -p /app/media/closet_images && \
+    chown -R django-user:django-user /app/media
 
 USER django-user
 

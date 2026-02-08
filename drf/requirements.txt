@@ -7,3 +7,4 @@ python-dotenv>=1.0.0,<2.0.0
 psycopg[binary]
 djangorestframework-simplejwt
 django-cors-headers
+Pillow>=10.0.0,<11.0.0

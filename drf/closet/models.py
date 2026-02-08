@@ -19,8 +19,10 @@ class Closet(models.Model):
         choices=Category.choices
     )
 
-    image_url = models.URLField(
-        max_length=500
+    image = models.ImageField(
+        upload_to="closet_images/",
+        null=True,
+        blank=True,
     )
 
     created_at = models.DateTimeField(
@@ -28,4 +30,4 @@ class Closet(models.Model):
     )
 
     def __str__(self):
-        return f"{self.category} - {self.image_url}"
+        return f"{self.category} - {self.image}"

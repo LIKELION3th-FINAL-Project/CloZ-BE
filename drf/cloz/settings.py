@@ -157,11 +157,24 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")
 TOSS_CLIENT_KEY = os.getenv("TOSS_CLIENT_KEY")
 
+# Social Login
+KAKAO_REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
+KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET")
+NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
+NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
+# Social Login Redirect URIs (허용된 redirect_uri 목록)
+SOCIAL_LOGIN_REDIRECT_URIS = [
+    "http://localhost:5173/callback/kakao",
+    "http://localhost:5173/callback/naver",
+    "http://localhost:5173/callback/google",
+]
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vite 개발 서버
     "http://127.0.0.1:5173",
-    "http://localhost:5174",  
-    "http://127.0.0.1:5174",
 ]
 
 CORS_ALLOW_CREDENTIALS = True

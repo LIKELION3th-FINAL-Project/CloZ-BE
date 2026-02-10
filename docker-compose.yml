@@ -3,6 +3,7 @@ services:
     build: 
       context: .
       dockerfile: drf/Dockerfile
+    restart: always
     expose:
       - "8000"
     volumes:

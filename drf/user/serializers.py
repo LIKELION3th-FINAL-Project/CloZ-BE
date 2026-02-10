@@ -139,6 +139,51 @@ class MyPageUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
+class SocialSignupSerializer(serializers.ModelSerializer):
+    styles = serializers.ListField(
+        child=serializers.CharField(),
+        write_only=True,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "nickname",
+            "profile_image",
+            "height",
+            "weight",
+            "gender",
+            "styles",
+        ]
+
+    def validate_styles(self, value):
+        if not (1 <= len(value) <= 3):
+            raise serializers.ValidationError(
+                "styles는 1~3개 선택해야 합니다."
+            )
+        return value
+
+    def create(self, validated_data):
+        styles = validated_data.pop("styles")
+        login_id = self.context["login_id"]
+
+        user = User.objects.create_user(
+            login_id=login_id,
+            nickname=validated_data["nickname"],
+            height=validated_data["height"],
+            weight=validated_data["weight"],
+            gender=validated_data["gender"],
+            profile_image=validated_data.get("profile_image", ""),
+        )
+
+        style_objs = Style.objects.filter(name__in=styles)
+        UserStyle.objects.bulk_create(
+            [UserStyle(user=user, style=s) for s in style_objs]
+        )
+
+        return user
+
+
 class AddressCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address

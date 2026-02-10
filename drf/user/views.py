@@ -1,3 +1,5 @@
+import requests
+from django.conf import settings as django_settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -11,6 +13,7 @@ from .serializers import (
     LoginSerializer,
     MyPageSerializer,
     MyPageUpdateSerializer,
+    SocialSignupSerializer,
     AddressCreateSerializer,
     AddressUpdateSerializer,
 )
@@ -71,38 +74,236 @@ class LoginView(APIView):
         )
 
 
-class SocialSignupView(APIView):
+def exchange_code_for_token(provider, code, redirect_uri):
+    """인가코드를 access_token으로 교환"""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    if provider == "kakao":
+        resp = requests.post(
+            "https://kauth.kakao.com/oauth/token",
+            data={
+                "grant_type": "authorization_code",
+                "client_id": django_settings.KAKAO_REST_API_KEY,
+                "client_secret": django_settings.KAKAO_CLIENT_SECRET,
+                "redirect_uri": redirect_uri,
+                "code": code,
+            },
+            timeout=5,
+        )
+        data = resp.json()
+        if "access_token" not in data:
+            logger.warning(f"Kakao token exchange failed: {data}")
+        return data.get("access_token")
+
+    elif provider == "naver":
+        resp = requests.post(
+            "https://nid.naver.com/oauth2.0/token",
+            data={
+                "grant_type": "authorization_code",
+                "client_id": django_settings.NAVER_CLIENT_ID,
+                "client_secret": django_settings.NAVER_CLIENT_SECRET,
+                "code": code,
+                "state": "cloz_state",
+            },
+            timeout=5,
+        )
+        data = resp.json()
+        if "access_token" not in data:
+            logger.warning(f"Naver token exchange failed: {data}")
+        return data.get("access_token")
+
+    elif provider == "google":
+        resp = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "grant_type": "authorization_code",
+                "client_id": django_settings.GOOGLE_CLIENT_ID,
+                "client_secret": django_settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": redirect_uri,
+                "code": code,
+            },
+            timeout=5,
+        )
+        data = resp.json()
+        if "access_token" not in data:
+            logger.warning(f"Google token exchange failed: {data}")
+        return data.get("access_token")
+
+    return None
+
+
+def verify_social_token(provider, access_token):
+    """소셜 토큰을 검증하고 사용자 정보를 반환"""
+    if provider == "kakao":
+        resp = requests.get(
+            "https://kapi.kakao.com/v2/user/me",
+            headers={
+                "Authorization": f"Bearer {access_token}"
+            },
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        kakao_account = data.get("kakao_account", {})
+        profile = kakao_account.get("profile", {})
+        return {
+            "social_id": f"kakao_{data['id']}",
+            "email": kakao_account.get("email", ""),
+            "nickname": profile.get("nickname", ""),
+        }
+
+    elif provider == "naver":
+        resp = requests.get(
+            "https://openapi.naver.com/v1/nid/me",
+            headers={
+                "Authorization": f"Bearer {access_token}"
+            },
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json().get("response", {})
+        return {
+            "social_id": f"naver_{data.get('id')}",
+            "email": data.get("email", ""),
+            "nickname": data.get("nickname", ""),
+        }
+
+    elif provider == "google":
+        resp = requests.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={
+                "Authorization": f"Bearer {access_token}"
+            },
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        return {
+            "social_id": f"google_{data['id']}",
+            "email": data.get("email", ""),
+            "nickname": data.get("name", ""),
+        }
+
+    return None
+
+
+def resolve_social_access_token(request_data):
+    """요청 데이터에서 소셜 access_token을 확보한다.
+    직접 전달된 access_token을 사용하거나, code로 교환한다.
+    반환: (social_info, social_access_token, error_response)
+    """
+    provider = request_data.get("provider")
+    access_token = request_data.get("access_token")
+    code = request_data.get("code")
+    redirect_uri = request_data.get("redirect_uri")
+
+    if provider not in ("kakao", "naver", "google"):
+        return None, None, Response(
+            {"message": "지원하지 않는 provider입니다."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # code가 있으면 access_token으로 교환
+    if code and redirect_uri:
+        if redirect_uri not in django_settings.SOCIAL_LOGIN_REDIRECT_URIS:
+            return None, None, Response(
+                {"message": "허용되지 않은 redirect_uri입니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        access_token = exchange_code_for_token(
+            provider, code, redirect_uri
+        )
+        if not access_token:
+            return None, None, Response(
+                {"message": f"{provider} 인가코드로 토큰 교환에 실패했습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    if not access_token:
+        return None, None, Response(
+            {"message": "access_token 또는 code가 필요합니다."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    social_info = verify_social_token(provider, access_token)
+    if not social_info:
+        return None, None, Response(
+            {"message": "소셜 토큰 검증에 실패했습니다."},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    return social_info, access_token, None
+
+
+class SocialAuthView(APIView):
+    """소셜 인증 (로그인 + 회원가입 통합)"""
     permission_classes = []
 
     def post(self, request):
-        provider = request.data.get("provider")
-        provider_token = request.data.get("provider_token")
+        social_info, social_access_token, error_response = (
+            resolve_social_access_token(request.data)
+        )
+        if error_response:
+            return error_response
 
-        # TODO: provider_token 검증 (카카오/네이버 API)
-        social_id = f"{provider}_{provider_token}"
-
-        user, created = User.objects.get_or_create(
-            login_id=f"{social_id}@social.user",
-            defaults={
-                "nickname": request.data.get("nickname"),
-                "height": request.data.get("height"),
-                "weight": request.data.get("weight"),
-                "gender": request.data.get("gender"),
-                "profile_image": request.data.get(
-                    "profile_image", ""
-                ),
-            }
+        social_id = social_info["social_id"]
+        login_id = (
+            social_info.get("email")
+            or f"{social_id}@social.user"
         )
 
-        access_token = issue_token(user)
+        # 1) 기존 유저 → 로그인
+        user = User.objects.filter(login_id=login_id).first()
+        if user:
+            jwt_token = issue_token(user)
+            return Response(
+                {
+                    "user_id": user.id,
+                    "nickname": user.nickname,
+                    "access_token": jwt_token,
+                    "is_new_user": False,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # 2) 신규 유저 + 프로필 필드 없음 → 소셜 정보만 반환
+        has_profile = all(
+            key in request.data
+            for key in ("nickname", "height", "weight", "gender", "styles")
+        )
+        if not has_profile:
+            return Response(
+                {
+                    "is_new_user": True,
+                    "email": social_info.get("email", ""),
+                    "nickname": social_info.get("nickname", ""),
+                    "social_access_token": social_access_token,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # 3) 신규 유저 + 프로필 필드 있음 → 회원가입
+        serializer = SocialSignupSerializer(
+            data=request.data,
+            context={"login_id": login_id},
+        )
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        jwt_token = issue_token(user)
 
         return Response(
             {
                 "user_id": user.id,
                 "nickname": user.nickname,
-                "access_token": access_token,
+                "access_token": jwt_token,
+                "is_new_user": True,
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_201_CREATED,
         )
 
 

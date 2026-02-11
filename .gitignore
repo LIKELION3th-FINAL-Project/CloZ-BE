@@ -144,3 +144,4 @@ cython_debug/
 # fronten
 ../frontend/
 data/
+.data/

@@ -46,6 +46,35 @@ services:
     depends_on:
       - app
 
+  ai:
+    build:
+      context: ./fastapi
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./fastapi:/app
+    environment:
+      - REDIS_HOST=redis        # (세션/캐시 쓰면)
+      - REDIS_PORT=6379
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - redis
+    
+  celery:
+    build:
+      context: ./fastapi
+    restart: always
+    command: celery -A app.worker worker -l info
+    volumes:
+      - ./fastapi:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+
 
 volumes:
   postgres-data:

@@ -2,3 +2,11 @@ fastapi
 uvicorn
 celery
 redis
+asyncpg                  # PostgreSQL 비동기 드라이버
+sqlalchemy[asyncio]      # 비동기 ORM / 쿼리
+pgvector                 # SQLAlchemy용 pgvector 타입
+fashion-clip             # Fashion CLIP 모델
+torch                    # PyTorch (fashion-clip 의존)
+Pillow                   # 이미지 처리
+pydantic-settings        # 환경변수 → 설정 클래스
+boto3

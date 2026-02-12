@@ -55,12 +55,11 @@ services:
       - "8001:8001"
     volumes:
       - ./fastapi:/app
-    environment:
-      - REDIS_HOST=redis        # (세션/캐시 쓰면)
-      - REDIS_PORT=6379
-      - PYTHONUNBUFFERED=1
+    env_file:
+      - ./fastapi/.env
     depends_on:
       - redis
+      - 
     
   celery:
     build:

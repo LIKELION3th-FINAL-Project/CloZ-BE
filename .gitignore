@@ -145,3 +145,4 @@ cython_debug/
 ../frontend/
 data/
 .data/
+awscliv2.zip

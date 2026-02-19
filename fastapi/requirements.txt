@@ -3,10 +3,19 @@ uvicorn
 celery
 redis
 asyncpg                  # PostgreSQL 비동기 드라이버
+psycopg2-binary          # PostgreSQL 동기 드라이버 (Celery 워커용)
 sqlalchemy[asyncio]      # 비동기 ORM / 쿼리
 pgvector                 # SQLAlchemy용 pgvector 타입
-fashion-clip             # Fashion CLIP 모델
-torch                    # PyTorch (fashion-clip 의존)
 Pillow                   # 이미지 처리
 pydantic-settings        # 환경변수 → 설정 클래스
-boto3
+httpx                    # 비동기 HTTP 클라이언트
+boto3                    # AWS S3
+
+# ── 서브모듈(CloZ-AI) 의존성 ──
+torch                    # CLIPEncoder
+transformers             # CLIPModel, CLIPProcessor
+openai                   # UnderstandModel (Upstage API)
+pyyaml                   # YAML config 파싱
+loguru                   # 로깅
+python-dotenv            # .env 로드
+chromadb

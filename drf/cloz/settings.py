@@ -189,11 +189,9 @@ STORAGES = {
     },
 }
 
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+# AWS_ACCESS_KEY_ID=your-access-key-here
+# AWS_SECRET_ACCESS_KEY=your-secret-key-here
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
-AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-northeast-2")
-
-# public-read가 아닌 경우 pre-signed URL 사용
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-northeast-2")# public-read가 아닌 경우 pre-signed URL 사용
 AWS_QUERYSTRING_AUTH = True
 AWS_DEFAULT_ACL = None

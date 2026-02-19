@@ -20,3 +20,4 @@ async def get_session():
     """FastAPI Depends용 세션 제너레이터"""
     async with AsyncSessionLocal() as session:
         yield session
+        

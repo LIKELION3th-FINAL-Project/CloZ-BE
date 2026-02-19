@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -179,19 +180,38 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# ── S3 Storage ──
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
-
-# AWS_ACCESS_KEY_ID=your-access-key-here
-# AWS_SECRET_ACCESS_KEY=your-secret-key-here
+# ── Storage (S3 optional) ──
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
-AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-northeast-2")# public-read가 아닌 경우 pre-signed URL 사용
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-northeast-2")
 AWS_QUERYSTRING_AUTH = True
 AWS_DEFAULT_ACL = None
+USE_S3 = os.getenv("USE_S3", "0" if DEBUG else "1") == "1"
+ALLOW_S3_IN_DEBUG = os.getenv("ALLOW_S3_IN_DEBUG", "0") == "1"
+
+# 로컬 개발(DEBUG)에서는 기본적으로 로컬 파일 스토리지를 사용한다.
+# S3를 꼭 테스트해야 할 때만 ALLOW_S3_IN_DEBUG=1로 명시적으로 활성화.
+if DEBUG and USE_S3 and not ALLOW_S3_IN_DEBUG:
+    USE_S3 = False
+
+if USE_S3:
+    if not AWS_STORAGE_BUCKET_NAME:
+        raise ImproperlyConfigured(
+            "USE_S3=1 인 경우 AWS_S3_BUCKET_NAME이 필요합니다."
+        )
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }

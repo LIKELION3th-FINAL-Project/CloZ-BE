@@ -36,6 +36,18 @@ class Closet(models.Model):
         verbose_name="스타일 카테고리",
     )
 
+    class EmbeddingStatus(models.TextChoices):
+        PENDING = "PENDING", "대기"
+        PROCESSING = "PROCESSING", "처리중"
+        DONE = "DONE", "완료"
+        FAILED = "FAILED", "실패"
+
+    embedding_status = models.CharField(
+        max_length=20,
+        choices=EmbeddingStatus.choices,
+        default=EmbeddingStatus.PENDING,
+    )
+
     # 임베딩 벡터 필드 추가 
     embedding = VectorField(
         dimensions=512,       # 사용하는 모델 출력 차원에 맞춰 조정

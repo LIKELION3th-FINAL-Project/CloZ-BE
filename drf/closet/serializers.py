@@ -13,12 +13,17 @@ class ClosetListSerializer(serializers.ModelSerializer):
             "category",
             "image_url",
             "created_at",
+            "style_cat",
+            "embedding_status",
         ]
 
     def get_image_url(self, obj):
         request = self.context.get("request")
         if obj.image and request:
-            return request.build_absolute_uri(obj.image.url)
+            try:
+                return request.build_absolute_uri(obj.image.url)
+            except Exception:
+                return None
         return None
 
 

@@ -34,50 +34,77 @@ async def create_embedding(
     """
     encoder = get_clip_encoder()
 
-    # ── 1. 이미지 다운로드 ──
     try:
-        image = await download_image_from_url(req.image_url)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"이미지 다운로드 실패: {str(e)}",
+        # ── 1. 이미지 다운로드 ──
+        try:
+            image = await download_image_from_url(req.image_url)
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"이미지 다운로드 실패: {str(e)}",
+            )
+
+        # ── 2. 임시 파일에 저장 (CLIPEncoder는 파일 경로를 받음) ──
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=True) as tmp:
+            image.save(tmp, format="JPEG")
+            tmp.flush()
+
+            # ── 3. Fashion CLIP 추론 ──
+            # 임베딩 벡터 (512차원, torch.Tensor → list)
+            embedding_tensor = encoder.encode_image(tmp.name)
+            embedding_list = embedding_tensor.cpu().tolist()
+
+            # 스타일 분류 (zero-shot)
+            style_cat = classify_style(encoder, tmp.name)
+
+        # ── 4. DB에 embedding + style_cat + 상태 저장 ──
+        await session.execute(
+            text("""
+                UPDATE closet_closet
+                SET embedding = :embedding,
+                    style_cat = :style_cat,
+                    embedding_status = 'DONE'
+                WHERE id = :id
+            """),
+            {
+                "embedding": str(embedding_list),
+                "style_cat": style_cat,
+                "id": req.id,
+            },
         )
+        await session.commit()
 
-    # ── 2. 임시 파일에 저장 (CLIPEncoder는 파일 경로를 받음) ──
-    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=True) as tmp:
-        image.save(tmp, format="JPEG")
-        tmp.flush()
-
-        # ── 3. Fashion CLIP 추론 ──
-        # 임베딩 벡터 (512차원, torch.Tensor → list)
-        embedding_tensor = encoder.encode_image(tmp.name)
-        embedding_list = embedding_tensor.cpu().tolist()
-
-        # 스타일 분류 (zero-shot)
-        style_cat = classify_style(encoder, tmp.name)
-
-    # ── 4. DB에 embedding + style_cat 저장 ──
-    await session.execute(
-        text("""
-            UPDATE closet_closet
-            SET embedding  = :embedding,
-                style_cat  = :style_cat
-            WHERE id = :id
-        """),
-        {
-            "embedding": str(embedding_list),
-            "style_cat": style_cat,
-            "id": req.id,
-        },
-    )
-    await session.commit()
-
-    # ── 5. 응답 반환 ──
-    return EmbeddingResponse(
-        id=req.id,
-        category=req.category,
-        image_url=req.image_url,
-        created_at=req.created_at,
-        style_cat=style_cat,
-        embedding=embedding_list,
-    )
+        # ── 5. 응답 반환 ──
+        return EmbeddingResponse(
+            id=req.id,
+            category=req.category,
+            image_url=req.image_url,
+            created_at=req.created_at,
+            style_cat=style_cat,
+            embedding=embedding_list,
+        )
+    except HTTPException:
+        await session.execute(
+            text("""
+                UPDATE closet_closet
+                SET embedding_status = 'FAILED'
+                WHERE id = :id
+            """),
+            {"id": req.id},
+        )
+        await session.commit()
+        raise
+    except Exception as e:
+        await session.execute(
+            text("""
+                UPDATE closet_closet
+                SET embedding_status = 'FAILED'
+                WHERE id = :id
+            """),
+            {"id": req.id},
+        )
+        await session.commit()
+        raise HTTPException(
+            status_code=500,
+            detail=f"임베딩 처리 실패: {str(e)}",
+        )

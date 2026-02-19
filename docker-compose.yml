@@ -3,10 +3,14 @@ services:
     build: 
       context: .
       dockerfile: drf/Dockerfile
+    restart: always
     expose:
       - "8000"
     volumes:
       - ./drf:/app
+      - ./data:/app/data
+      - ./data/havati_products:/app/media/havati_products
+      - closet-media:/app/media/closet_images
     env_file:
       - ./drf/.env
     depends_on:
@@ -16,7 +20,7 @@ services:
       sh -c "python manage.py runserver 0.0.0.0:8000"
       
   db:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     restart: always
     env_file:
       - ./drf/.env
@@ -36,10 +40,43 @@ services:
     ports:
       - "80:80"
     volumes:
+      - ./data/havati_products:/app/media/havati_products
+      - closet-media:/app/media/closet_images
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - app
 
+  ai:
+    build:
+      context: ./fastapi
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./fastapi:/app
+      - ./models:/app/models              # CloZ-AI 서브모듈 마운트
+    env_file:
+      - ./fastapi/.env
+    depends_on:
+      - redis
+      - db
+    
+  celery:
+    build:
+      context: ./fastapi
+    restart: always
+    command: celery -A app.worker worker -l info
+    volumes:
+      - ./fastapi:/app
+      - ./models:/app/models              # CloZ-AI 서브모듈 마운트
+    env_file:
+      - ./fastapi/.env
+    depends_on:
+      - redis
+      - db
+
 
 volumes:
   postgres-data:
+  closet-media:

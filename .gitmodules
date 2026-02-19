@@ -1,0 +1,4 @@
+[submodule "models"]
+	path = models
+	url = https://github.com/LIKELION3th-FINAL-Project/CloZ-AI.git
+	branch = feat/mj

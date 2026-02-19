@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "corsheaders",
     "cart",
     "closet",
     "order",
@@ -46,10 +47,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
+AUTH_USER_MODEL = "user.User"
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # CORS 설정
+    'django.middleware.common.CommonMiddleware', # CORS 설정
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -91,6 +95,18 @@ DATABASES = {
     }
 }
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.AllowAny",
+    ),
+}
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -128,7 +144,54 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files (User uploaded images)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Toss Payments
+TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")
+TOSS_CLIENT_KEY = os.getenv("TOSS_CLIENT_KEY")
+
+# Social Login
+KAKAO_REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
+KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET")
+NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
+NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
+# Social Login Redirect URIs (허용된 redirect_uri 목록)
+SOCIAL_LOGIN_REDIRECT_URIS = [
+    "http://localhost:5173/callback/kakao",
+    "http://localhost:5173/callback/naver",
+    "http://localhost:5173/callback/google",
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Vite 개발 서버
+    "http://127.0.0.1:5173",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# ── S3 Storage ──
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# AWS_ACCESS_KEY_ID=your-access-key-here
+# AWS_SECRET_ACCESS_KEY=your-secret-key-here
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-northeast-2")# public-read가 아닌 경우 pre-signed URL 사용
+AWS_QUERYSTRING_AUTH = True
+AWS_DEFAULT_ACL = None

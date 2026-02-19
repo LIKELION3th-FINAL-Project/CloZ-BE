@@ -11,6 +11,7 @@ services:
       - ./data:/app/data
       - ./data/havati_products:/app/media/havati_products
       - closet-media:/app/media/closet_images
+      - ../.aws:/root/.aws:ro
     env_file:
       - ./drf/.env
     depends_on:
@@ -56,6 +57,7 @@ services:
     volumes:
       - ./fastapi:/app
       - ./models:/app/models              # CloZ-AI 서브모듈 마운트
+      - ../.aws:/root/.aws:ro
     env_file:
       - ./fastapi/.env
     depends_on:
@@ -70,6 +72,7 @@ services:
     volumes:
       - ./fastapi:/app
       - ./models:/app/models              # CloZ-AI 서브모듈 마운트
+      - ../.aws:/root/.aws:ro
     env_file:
       - ./fastapi/.env
     depends_on:

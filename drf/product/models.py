@@ -1,5 +1,5 @@
 from django.db import models
-
+from pgvector.django import VectorField
 
 class Product(models.Model):
     """
@@ -50,3 +50,14 @@ class Product(models.Model):
 
     def __str__(self):
         return f"[{self.brand}] {self.product_name}"
+
+
+class ReferenceEmbedding(models.Model):
+    # CSV의 id: 예) "리조트/f47276e9.jpg"
+    source_id = models.CharField(max_length=255, unique=True, db_index=True)
+    style_cat = models.CharField(max_length=50, db_index=True)
+    embedding = VectorField(dimensions=512)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "reference_embeddings"

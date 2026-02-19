@@ -12,3 +12,4 @@ requests>=2.31.0,<3.0.0
 pgvector>=0.3.0,<0.4.0
 django-storages[s3]
 boto3
+django-prometheus>=2.3.1 

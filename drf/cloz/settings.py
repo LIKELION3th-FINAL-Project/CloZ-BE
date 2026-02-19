@@ -33,6 +33,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'django_prometheus',
     "corsheaders",
     "cart",
     "closet",
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "user.User"
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware', # CORS 설정
     'django.middleware.common.CommonMiddleware', # CORS 설정
     'django.middleware.security.SecurityMiddleware',
@@ -59,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'cloz.urls'
@@ -182,7 +185,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 # ── Storage (S3 optional) ──
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
-AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-northeast-2")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
 AWS_QUERYSTRING_AUTH = True
 AWS_DEFAULT_ACL = None
 USE_S3 = os.getenv("USE_S3", "0" if DEBUG else "1") == "1"

@@ -26,28 +26,44 @@ sys.modules["generation_pipeline.utils"] = ut
 # 전역 상태
 clip_encoder = None    # Fashion CLIP (이미지 임베딩)
 understand_model = None  # LLM (유저 의도 분석)
+model_load_errors = {}
 
 
 def load_all():
-    global clip_encoder, understand_model
+    global clip_encoder, understand_model, model_load_errors
+    model_load_errors = {}
 
     # 1) Fashion CLIP — 이미지 임베딩 + 스타일 분류
-    from generation_pipeline.fashion_engine.encoder import CLIPEncoder
+    try:
+        from generation_pipeline.fashion_engine.encoder import CLIPEncoder
 
-    print("[startup] Fashion CLIP 로딩 중...")
-    clip_encoder = CLIPEncoder()
-    print("[startup] Fashion CLIP 로드 완료")
+        print("[startup] Fashion CLIP 로딩 중...")
+        clip_encoder = CLIPEncoder()
+        print("[startup] Fashion CLIP 로드 완료")
+    except Exception as e:
+        clip_encoder = None
+        model_load_errors["clip_encoder"] = str(e)
+        print(f"[startup][warn] Fashion CLIP 로딩 실패: {e}")
 
     # 2) LLM — Upstage Solar Pro3 API 클라이언트
-    from generation_pipeline.understand_model.understand_model import UnderstandModel
-    print("[startup] UnderstandModel(LLM) 초기화 중...")
-    understand_model = UnderstandModel()
-    print("[startup] UnderstandModel 초기화 완료")
+    try:
+        from generation_pipeline.understand_model.understand_model import UnderstandModel
+
+        print("[startup] UnderstandModel(LLM) 초기화 중...")
+        understand_model = UnderstandModel()
+        print("[startup] UnderstandModel 초기화 완료")
+    except Exception as e:
+        understand_model = None
+        model_load_errors["understand_model"] = str(e)
+        print(f"[startup][warn] UnderstandModel 초기화 실패: {e}")
 
 
 def get_clip_encoder():
     """로드된 CLIPEncoder 인스턴스를 반환합니다."""
     if clip_encoder is None:
+        err = model_load_errors.get("clip_encoder")
+        if err:
+            raise RuntimeError(f"CLIPEncoder 로드 실패: {err}")
         raise RuntimeError("CLIPEncoder가 아직 로드되지 않았습니다.")
     return clip_encoder
 
@@ -55,5 +71,16 @@ def get_clip_encoder():
 def get_understand_model():
     """로드된 UnderstandModel 인스턴스를 반환합니다."""
     if understand_model is None:
+        err = model_load_errors.get("understand_model")
+        if err:
+            raise RuntimeError(f"UnderstandModel 로드 실패: {err}")
         raise RuntimeError("UnderstandModel이 아직 로드되지 않았습니다.")
     return understand_model
+
+
+def get_model_status():
+    return {
+        "clip_encoder_loaded": clip_encoder is not None,
+        "understand_model_loaded": understand_model is not None,
+        "errors": model_load_errors,
+    }

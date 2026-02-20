@@ -6,5 +6,5 @@
 
 - 서브모듈 설치
 ```bash
-git clone --recurse-submodules <repo_url>
+git submodule update --init --recursive
 ```

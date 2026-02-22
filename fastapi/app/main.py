@@ -32,11 +32,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # 라우터
-app.include_router(embedding.router, prefix="/api")
-app.include_router(agent.router, prefix="/api")
+app.include_router(embedding.router, prefix="/ai")
+app.include_router(agent.router, prefix="/ai")
 
 
-@app.get("/health")
+@app.get("/ai/health")
 def health_check():
     return {"status": "ok"}
 

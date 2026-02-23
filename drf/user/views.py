@@ -16,6 +16,7 @@ from .serializers import (
     MyPageUpdateSerializer,
     SocialSignupSerializer,
     AddressCreateSerializer,
+    AddressListSerializer,
     AddressUpdateSerializer,
 )
 
@@ -341,6 +342,14 @@ class MyPageView(APIView):
 
 class AddressCreateView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        addresses = Address.objects.filter(user=request.user).order_by(
+            "-is_default",
+            "-id",
+        )
+        serializer = AddressListSerializer(addresses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = AddressCreateSerializer(

@@ -234,6 +234,18 @@ class AddressCreateSerializer(serializers.ModelSerializer):
         )
 
 
+class AddressListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = [
+            "id",
+            "receiver",
+            "phone",
+            "address",
+            "is_default",
+        ]
+
+
 class AddressUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address

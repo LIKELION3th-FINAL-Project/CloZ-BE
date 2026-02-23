@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_S3_BUCKET_NAME: str = ""
     AWS_S3_REGION_NAME: str = "ap-northeast-2"
+    AWS_AUTH_MODE: str = "iam_role"  # auto | static | iam_role
+    AWS_PRESIGNED_URL_EXPIRE_SECONDS: int = 3600
 
     @property
     def celery_broker_url(self) -> str:

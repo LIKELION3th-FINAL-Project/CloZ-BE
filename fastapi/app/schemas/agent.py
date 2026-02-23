@@ -44,7 +44,7 @@ class ProductInfo(BaseModel):
 
 class OutfitInfo(BaseModel):
     outfit_id: int
-    image_url: str
+    image_key: str
     products: list[ProductInfo]
 
 

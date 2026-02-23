@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.routers import agent, embedding
+from app.routers import agent, embedding, images
 from app.state import get_model_status, load_all
 from app.database import engine
 
@@ -34,6 +34,7 @@ app = FastAPI(lifespan=lifespan)
 # 라우터
 app.include_router(embedding.router, prefix="/ai")
 app.include_router(agent.router, prefix="/ai")
+app.include_router(images.router, prefix="/ai")
 
 
 @app.get("/ai/health")

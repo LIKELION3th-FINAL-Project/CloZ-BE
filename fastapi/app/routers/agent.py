@@ -1,11 +1,86 @@
-from fastapi import APIRouter, HTTPException
+import sys
 import json
+from pathlib import Path
 
-from app.schemas.agent import AgentRequest, AgentResponse
-from app.state import get_understand_model
+from fastapi import APIRouter, HTTPException
+
+from app.config import settings
+from app.s3 import upload_generated_output
+from app.schemas.agent import AgentRequest, AgentResponse, OutfitInfo, ProductInfo
+from app.state import get_clip_encoder, get_understand_model
 from generation_pipeline.understand_model.understand_model import extract_json_format
 
 router = APIRouter(tags=["agent"])
+_generation_model = None
+
+
+def _ensure_models_src_on_path():
+    models_src = f"{settings.MODELS_ROOT}/src"
+    if models_src not in sys.path:
+        sys.path.insert(0, models_src)
+
+
+def _get_generation_model():
+    global _generation_model
+    if _generation_model is not None:
+        return _generation_model
+
+    _ensure_models_src_on_path()
+
+    from generation_pipeline import FashionRecommender, OutfitPlanner, VTONManager, load_config
+    from feedback_pipeline.interfaces.real_generation_model import RealGenerationModel
+
+    encoder = get_clip_encoder()
+    understand_model = get_understand_model()
+    config = load_config(settings.generation_config_path)
+
+    _generation_model = RealGenerationModel(
+        understand_model=understand_model,
+        encoder=encoder,
+        recommender=FashionRecommender(encoder),
+        planner=OutfitPlanner(encoder),
+        vton=VTONManager(),
+        config=config,
+    )
+    return _generation_model
+
+
+def _resolve_image_key(image_source: str, user_id: int, session_id: str) -> str:
+    if not image_source:
+        raise ValueError("model output image source is empty")
+    if image_source.startswith("recommendations/"):
+        return image_source
+
+    image_path = Path(image_source)
+    if image_path.exists() or not image_source.startswith("http"):
+        return upload_generated_output(
+            user_id=user_id,
+            session_id=session_id,
+            local_output_path=image_source,
+        )
+    raise ValueError(f"unsupported model output for image_key contract: {image_source}")
+
+
+def _to_outfit_info(model_outfit, user_id: int, session_id: str) -> OutfitInfo:
+    image_key = _resolve_image_key(
+        image_source=getattr(model_outfit, "image_url", ""),
+        user_id=user_id,
+        session_id=session_id,
+    )
+    products = [
+        ProductInfo(
+            product_id=item.product_id,
+            category_main=item.category_main,
+            category_sub=item.category_sub,
+            product_name=item.product_name,
+        )
+        for item in getattr(model_outfit, "products", [])
+    ]
+    return OutfitInfo(
+        outfit_id=getattr(model_outfit, "outfit_id", 0),
+        image_key=image_key,
+        products=products,
+    )
 
 
 def _build_agent_prompt(req: AgentRequest) -> str:
@@ -45,10 +120,30 @@ async def run_agent(req: AgentRequest):
         else:
             message_text = raw_output
 
+        generation_outfits = []
+        generation_model = _get_generation_model()
+        # 요청에서 전달된 경로가 로컬 파일 경로면 동적으로 반영한다.
+        if req.user.body_image_url and not req.user.body_image_url.startswith("http"):
+            generation_model.config["user_body_image"] = req.user.body_image_url
+
+        generation_result = generation_model.generate(
+            prompt=req.message,
+            user_id=str(req.user.user_id),
+        )
+        if generation_result.success and generation_result.outfits:
+            generation_outfits = [
+                _to_outfit_info(
+                    model_outfit=o,
+                    user_id=req.user.user_id,
+                    session_id=req.session_id or "default",
+                )
+                for o in generation_result.outfits
+            ]
+
         return AgentResponse(
             session_id=req.session_id,
             message=message_text,
-            outfits=[],
+            outfits=generation_outfits,
         )
 
     except RuntimeError as e:

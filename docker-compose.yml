@@ -111,13 +111,12 @@ services:
     build:
       context: ./fastapi
     restart: always
-    command: celery -A app.worker worker -l info
+    command: celery -A app.worker worker -l info #  Celery 워커 실행
     volumes:
-      - ./fastapi:/app
-      - ./models:/app/models              # CloZ-AI 서브모듈 마운트
-      - ../.aws:/root/.aws:ro
+      - ./fastapi:/app            
+      - ./models:/app/models      # 모델 공유 가능     
     env_file:
-      - ./fastapi/.env
+      - ./fastapi/.env  # celery에서 쓰이는 환경변수가 없는데 
     depends_on:
       - redis
       - db

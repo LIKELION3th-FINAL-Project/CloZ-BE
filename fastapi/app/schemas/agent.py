@@ -10,6 +10,7 @@ class UserInfo(BaseModel):
     height: float
     weight: float
     styles: list[str]
+    body_image_url: Optional[str] = None
 
 
 class ClosetItem(BaseModel):

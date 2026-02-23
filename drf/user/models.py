@@ -28,6 +28,11 @@ class User(AbstractUser):
     login_id = models.EmailField(unique=True)
     nickname = models.CharField(max_length=20)
     profile_image = models.URLField(blank=True)
+    body_image = models.ImageField(
+        upload_to="body_images/",
+        null=True,
+        blank=True,
+    )
     height = models.IntegerField()
     weight = models.IntegerField()
 

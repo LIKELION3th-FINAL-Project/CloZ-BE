@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from .models import Address
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -28,6 +29,7 @@ def issue_token(user):
 
 class SignupView(APIView):
     permission_classes = []
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
 
     def post(self, request):
         if User.objects.filter(
@@ -242,6 +244,7 @@ def resolve_social_access_token(request_data):
 class SocialAuthView(APIView):
     """소셜 인증 (로그인 + 회원가입 통합)"""
     permission_classes = []
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
 
     def post(self, request):
         social_info, social_access_token, error_response = (
@@ -309,9 +312,13 @@ class SocialAuthView(APIView):
 
 class MyPageView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
 
     def get(self, request):
-        serializer = MyPageSerializer(request.user)
+        serializer = MyPageSerializer(
+            request.user,
+            context={"request": request},
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):
@@ -324,7 +331,10 @@ class MyPageView(APIView):
         serializer.save()
 
         return Response(
-            MyPageSerializer(request.user).data,
+            MyPageSerializer(
+                request.user,
+                context={"request": request},
+            ).data,
             status=status.HTTP_200_OK,
         )
 

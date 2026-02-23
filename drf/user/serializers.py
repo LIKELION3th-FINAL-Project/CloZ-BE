@@ -23,6 +23,7 @@ class SignupSerializer(serializers.ModelSerializer):
             "weight",
             "gender",
             "profile_image",
+            "body_image",
             "styles",
         ]
         extra_kwargs = {
@@ -47,6 +48,7 @@ class SignupSerializer(serializers.ModelSerializer):
             weight=validated_data["weight"],
             gender=validated_data["gender"],
             profile_image=validated_data.get("profile_image", ""),
+            body_image=validated_data.get("body_image"),
         )
 
         style_objs = Style.objects.filter(name__in=styles)
@@ -77,6 +79,7 @@ class LoginSerializer(serializers.Serializer):
 
 class MyPageSerializer(serializers.ModelSerializer):
     styles = serializers.SerializerMethodField()
+    body_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -84,6 +87,7 @@ class MyPageSerializer(serializers.ModelSerializer):
             "id",
             "nickname",
             "profile_image",
+            "body_image_url",
             "height",
             "weight",
             "gender",
@@ -95,6 +99,18 @@ class MyPageSerializer(serializers.ModelSerializer):
             obj.user_styles.select_related("style")
             .values_list("style__name", flat=True)
         )
+
+    def get_body_image_url(self, obj):
+        if not obj.body_image:
+            return None
+
+        request = self.context.get("request")
+        if request:
+            try:
+                return request.build_absolute_uri(obj.body_image.url)
+            except Exception:
+                return None
+        return obj.body_image.url
 
 
 class MyPageUpdateSerializer(serializers.ModelSerializer):
@@ -108,6 +124,7 @@ class MyPageUpdateSerializer(serializers.ModelSerializer):
         fields = [
             "nickname",
             "profile_image",
+            "body_image",
             "height",
             "weight",
             "gender",
@@ -123,6 +140,11 @@ class MyPageUpdateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         styles = validated_data.pop("styles", None)
+        new_body_image = validated_data.get("body_image")
+
+        # 새 전신 사진이 업로드되면 기존 파일을 정리한다.
+        if new_body_image and instance.body_image:
+            instance.body_image.delete(save=False)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -150,6 +172,7 @@ class SocialSignupSerializer(serializers.ModelSerializer):
         fields = [
             "nickname",
             "profile_image",
+            "body_image",
             "height",
             "weight",
             "gender",
@@ -174,6 +197,7 @@ class SocialSignupSerializer(serializers.ModelSerializer):
             weight=validated_data["weight"],
             gender=validated_data["gender"],
             profile_image=validated_data.get("profile_image", ""),
+            body_image=validated_data.get("body_image"),
         )
 
         style_objs = Style.objects.filter(name__in=styles)

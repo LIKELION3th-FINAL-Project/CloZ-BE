@@ -54,7 +54,6 @@ services:
     ports:
       - "8001:8001"
     volumes:
-      - ./fastapi:/app
       - ./models:/app/models              # CloZ-AI 서브모듈 마운트
       - ../.aws:/root/.aws:ro
     env_file:

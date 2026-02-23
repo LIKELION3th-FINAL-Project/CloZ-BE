@@ -10,14 +10,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ \
     git \
     ca-certificates \
+    libxcb1 \
+    libgl1 \
+    libglib2.0-0 \
     && ln -sf /usr/bin/python3.11 /usr/bin/python \
-    && ln -sf /usr/bin/pip3 /usr/bin/pip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python3.11 -m pip install --upgrade pip setuptools wheel \
+    && python3.11 -m pip install --no-cache-dir -r requirements.txt
+
+# 빌드에서 검증...
+RUN python -c "import fashn_vton; print(fashn_vton.__version__)"
 
 COPY . .
 

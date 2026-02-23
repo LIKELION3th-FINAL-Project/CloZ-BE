@@ -19,3 +19,7 @@ pyyaml                   # YAML config 파싱
 loguru                   # 로깅
 python-dotenv            # .env 로드
 chromadb
+fashn-human-parser
+rembg
+git+https://github.com/fashn-AI/fashn-vton-1.5.git 
+

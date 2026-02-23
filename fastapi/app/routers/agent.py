@@ -28,7 +28,10 @@ def _get_generation_model():
 
     _ensure_models_src_on_path()
 
-    from generation_pipeline import FashionRecommender, OutfitPlanner, VTONManager, load_config
+    from generation_pipeline.fashion_engine.recommender import FashionRecommender
+    from generation_pipeline.fashion_engine.planner import OutfitPlanner
+    from generation_pipeline.fashion_engine.vton import VTONManager
+    from generation_pipeline.utils.load import load_config
     from feedback_pipeline.interfaces.real_generation_model import RealGenerationModel
 
     encoder = get_clip_encoder()

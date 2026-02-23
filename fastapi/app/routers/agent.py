@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 
 from app.config import settings
+from app.image_utils import download_image_bytes_from_url
 from app.s3 import upload_generated_output
 from app.schemas.agent import AgentRequest, AgentResponse, OutfitInfo, ProductInfo
 from app.state import get_clip_encoder, get_understand_model
@@ -122,6 +123,19 @@ async def run_agent(req: AgentRequest):
 
         generation_outfits = []
         generation_model = _get_generation_model()
+        generation_context = {}
+
+        if req.user.body_image_url and req.user.body_image_url.startswith("http"):
+            try:
+                generation_context["user_body_image_bytes"] = (
+                    await download_image_bytes_from_url(req.user.body_image_url)
+                )
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"body_image_url 다운로드 실패: {exc}",
+                ) from exc
+
         # 요청에서 전달된 경로가 로컬 파일 경로면 동적으로 반영한다.
         if req.user.body_image_url and not req.user.body_image_url.startswith("http"):
             generation_model.config["user_body_image"] = req.user.body_image_url
@@ -129,6 +143,7 @@ async def run_agent(req: AgentRequest):
         generation_result = generation_model.generate(
             prompt=req.message,
             user_id=str(req.user.user_id),
+            context=generation_context or None,
         )
         if generation_result.success and generation_result.outfits:
             generation_outfits = [

@@ -24,10 +24,16 @@ def _to_internal_url(image_url: str) -> str:
 
 async def download_image_from_url(image_url: str) -> Image.Image:
     """HTTP URL에서 이미지를 다운로드하여 PIL Image로 반환."""
+    image_bytes = await download_image_bytes_from_url(image_url)
+    return Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+
+async def download_image_bytes_from_url(image_url: str) -> bytes:
+    """HTTP URL에서 원본 이미지 bytes를 다운로드하여 반환."""
     internal_url = _to_internal_url(image_url)
 
     async with httpx.AsyncClient() as client:
         response = await client.get(internal_url, timeout=30.0)
         response.raise_for_status()
 
-    return Image.open(io.BytesIO(response.content)).convert("RGB")
+    return response.content

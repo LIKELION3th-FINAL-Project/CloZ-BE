@@ -1,6 +1,7 @@
 from django.db import models
 from pgvector.django import VectorField
 
+
 class Product(models.Model):
     """
     서비스에서 사용하는 상품 도메인 모델

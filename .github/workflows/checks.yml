@@ -5,7 +5,7 @@ on:
     branches:
       - main
 jobs:
-  test-lint: # job 이름(이름 수정 가능)
+  test-lint: 
     runs-on: ubuntu-24.04
     steps:
       - name: Login to Docker Hub

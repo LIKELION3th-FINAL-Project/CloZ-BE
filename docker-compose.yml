@@ -5,7 +5,7 @@ services:
       dockerfile: drf/Dockerfile
     restart: always
     expose:
-      - "8000"
+      - "8000:8000"
     volumes:
       - ./drf:/app
       - ./data:/app/data

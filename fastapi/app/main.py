@@ -14,6 +14,7 @@ async def lifespan(app: FastAPI):
     # 모델 로딩 실패가 있어도 API 서버 자체는 뜨도록 처리한다.
     load_all()
     app.state.model_status = get_model_status()
+    print(app.state.model_status) #{'clip_encoder_loaded': True, 'understand_model_loaded': True, 'errors': {}}
     if app.state.model_status["errors"]:
         print(f"[startup][warn] model load errors: {app.state.model_status['errors']}")
 

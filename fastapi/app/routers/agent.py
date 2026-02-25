@@ -9,7 +9,7 @@ from app.image_utils import download_image_bytes_from_url
 from app.s3 import upload_generated_output
 from app.schemas.agent import AgentRequest, AgentResponse, OutfitInfo, ProductInfo
 from app.state import get_clip_encoder, get_understand_model
-from generation_pipeline.understand_model.understand_model import extract_json_format
+from generation_pipeline.understand_model.understand_model import extract_json_format #
 
 import logging
 logger = logging.getLogger(__name__)
@@ -20,7 +20,6 @@ _generation_model = None
 
 def _ensure_models_src_on_path():
     models_src = f"{settings.MODELS_ROOT}/"
-    # models_src = f"{settings.MODELS_ROOT}/src"
     if models_src not in sys.path:
         sys.path.insert(0, models_src)
 

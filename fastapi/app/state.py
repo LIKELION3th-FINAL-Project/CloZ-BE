@@ -65,6 +65,9 @@ def get_clip_encoder():
         if err:
             raise RuntimeError(f"CLIPEncoder 로드 실패: {err}")
         raise RuntimeError("CLIPEncoder가 아직 로드되지 않았습니다.")
+    else :
+        print("[startup] Fashion CLIP 로드 완료")
+        print(clip_encoder) 
     return clip_encoder
 
 

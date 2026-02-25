@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: drf/Dockerfile
     restart: always
-    expose:
+    ports:
       - "8000:8000"
     volumes:
       - ./drf:/app

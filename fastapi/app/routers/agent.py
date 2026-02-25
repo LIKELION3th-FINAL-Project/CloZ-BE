@@ -19,7 +19,8 @@ _generation_model = None
 
 
 def _ensure_models_src_on_path():
-    models_src = f"{settings.MODELS_ROOT}/src"
+    models_src = f"{settings.MODELS_ROOT}/"
+    # models_src = f"{settings.MODELS_ROOT}/src"
     if models_src not in sys.path:
         sys.path.insert(0, models_src)
 

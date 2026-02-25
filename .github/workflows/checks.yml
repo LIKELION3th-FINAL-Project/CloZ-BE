@@ -3,7 +3,7 @@ name: Checks
 on:
   push:
     branches:
-      - develop # develop 브랜치만
+      - main
 jobs:
   test-lint: # job 이름(이름 수정 가능)
     runs-on: ubuntu-24.04

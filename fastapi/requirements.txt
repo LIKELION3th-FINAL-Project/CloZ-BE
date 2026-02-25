@@ -22,3 +22,4 @@ chromadb
 fashn-human-parser
 rembg
 git+https://github.com/fashn-AI/fashn-vton-1.5.git
+google-generativeai

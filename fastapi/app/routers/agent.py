@@ -11,6 +11,9 @@ from app.schemas.agent import AgentRequest, AgentResponse, OutfitInfo, ProductIn
 from app.state import get_clip_encoder, get_understand_model
 from generation_pipeline.understand_model.understand_model import extract_json_format
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["agent"])
 _generation_model = None
 
@@ -35,7 +38,7 @@ def _get_generation_model():
     from feedback_pipeline.interfaces.real_generation_model import RealGenerationModel
 
     encoder = get_clip_encoder()
-    understand_model = get_understand_model()
+    understand_model = get_understand_model() # llm호출 
     config = load_config(settings.generation_config_path)
 
     _generation_model = RealGenerationModel(
@@ -108,22 +111,26 @@ def _build_agent_prompt(req: AgentRequest) -> str:
 
 @router.post("/agents/", response_model=AgentResponse)
 async def run_agent(req: AgentRequest):
+    logger.info("에이전트 요청 시작")
     try:
         understand_model = get_understand_model()
-        model_input = _build_agent_prompt(req)
+        model_input = _build_agent_prompt(req)  
+        logger.info("에이전트 요청 :  session=%s user=%s msg=%r body_image_url=%r",req.session_id, req.user.user_id, req.message[:200], req.user.body_image_url)
 
         # 1) LLM 원문 응답
         raw_output = understand_model.initial_chat(model_input)
+        logger.info("LLM 원문 응답: %s", raw_output)
 
         # 2) JSON 파싱 시도
         parsed = extract_json_format(raw_output)
+        logger.info("JSON 파싱 결과: %s", parsed)
 
         # 3) 프론트 표시용: 파싱 성공하면 pretty json, 실패하면 raw text
         if parsed is not None:
             message_text = json.dumps(parsed, ensure_ascii=False, indent=2)
         else:
             message_text = raw_output
-
+        logger.info("프론트 표시용 메시지: %s", message_text)
         generation_outfits = []
         generation_model = _get_generation_model()
         generation_context = {}

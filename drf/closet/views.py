@@ -15,7 +15,7 @@ from .serializers import ClosetListSerializer, ClosetCreateSerializer
 logger = logging.getLogger(__name__)
 
 # Docker 내부에서 FastAPI(ai) 서비스 접근 URL
-FASTAPI_EMBEDDING_URL = "http://ai:8001/api/embeddings/"
+FASTAPI_EMBEDDING_URL = "http://ai:8001/ai/embeddings/"
 
 
 def trigger_embedding_async(closet, request):

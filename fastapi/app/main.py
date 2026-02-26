@@ -6,6 +6,8 @@ from sqlalchemy import text
 from app.routers import agent, embedding, images
 from app.state import get_model_status, load_all
 from app.database import engine
+from fastapi.middleware.cors import CORSMiddleware
+
 
 
 @asynccontextmanager
@@ -32,6 +34,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://clo-z-fe.vercel.app"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # 라우터
 app.include_router(embedding.router, prefix="/ai")
 app.include_router(agent.router, prefix="/ai")

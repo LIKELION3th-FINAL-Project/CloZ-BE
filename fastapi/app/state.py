@@ -51,6 +51,7 @@ def load_all():
 
         print("[startup] UnderstandModel(LLM) 초기화 중...")
         understand_model = UnderstandModel()
+
         print("[startup] UnderstandModel 초기화 완료")
     except Exception as e:
         understand_model = None

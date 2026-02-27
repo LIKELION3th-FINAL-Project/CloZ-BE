@@ -9,7 +9,11 @@ from app.image_utils import download_image_bytes_from_url
 from app.s3 import upload_generated_output
 from app.schemas.agent import AgentRequest, AgentResponse, OutfitInfo, ProductInfo
 from app.state import get_clip_encoder, get_understand_model
-from generation_pipeline.understand_model.understand_model import extract_json_format #
+from generation_pipeline.understand_model.understand_model import (
+    build_system_prompt,
+    build_user_prompt,
+    extract_json_format,
+)
 
 import logging
 logger = logging.getLogger(__name__)
@@ -108,6 +112,25 @@ def _build_agent_prompt(req: AgentRequest) -> str:
         "user_body_image_url: NONE"
     )
 
+def _interact_with_user_chat(understand_model, first_model_response: str) -> str:  # 호출해서 쓰는거 고려. 
+    """
+    models/ 코드를 수정하지 않고, A(=initial_chat 결과)를 입력으로 받아
+    B(=interact_with_user_chat 결과)를 생성한다.
+    """
+    messages = [
+        build_system_prompt(understand_model.interact_with_user_sys_prompt, first_model_response)
+    ]
+    # user prompt는 선택 사항이지만, 빈 문자열이면 일부 백엔드에서 거부될 수 있어 공백을 넣는다.
+    messages.append(build_user_prompt(" "))
+
+    response = understand_model.client.chat.completions.create(
+        model=understand_model.model_name,
+        messages=messages,
+        temperature=understand_model.temperature,
+        reasoning_effort=understand_model.reasoning_effort,
+    )
+    return response.choices[0].message.content
+
 
 @router.post("/agents/", response_model=AgentResponse)
 async def run_agent(req: AgentRequest):
@@ -117,19 +140,23 @@ async def run_agent(req: AgentRequest):
         model_input = _build_agent_prompt(req)  
         logger.info("에이전트 요청 :  session=%s user=%s msg=%r body_image_url=%r",req.session_id, req.user.user_id, req.message[:200], req.user.body_image_url)
 
-        # 1) LLM 원문 응답
-        raw_output = understand_model.initial_chat(model_input)
-        logger.info("LLM 원문 응답: %s", raw_output)
+        # 1) A = initial_chat(user input 기반)
+        initial_output = understand_model.initial_chat(model_input)
+        logger.info("A(initial_chat) 결과: %s", initial_output)
+
+        # 2) B = interact_with_user_chat(A)
+        interact_output = _interact_with_user_chat(understand_model, initial_output)
+        logger.info("B(interact_with_user_chat) 결과: %s", interact_output)
 
         # 2) JSON 파싱 시도
-        parsed = extract_json_format(raw_output)
+        parsed = extract_json_format(interact_output)
         logger.info("JSON 파싱 결과: %s", parsed)
 
         # 3) 프론트 표시용: 파싱 성공하면 pretty json, 실패하면 raw text
         if parsed is not None:
             message_text = json.dumps(parsed, ensure_ascii=False, indent=2)
         else:
-            message_text = raw_output
+            message_text = interact_output
         logger.info("프론트 표시용 메시지: %s", message_text)
         generation_outfits = []
         generation_model = _get_generation_model()

@@ -180,7 +180,9 @@ SOCIAL_LOGIN_REDIRECT_URIS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://clo-z-fe.vercel.app",
+    "https://clo-z-fe.vercel.app", # 배포 서버 
+    "http://localhost:5173", # 개발 서버
+    "http://127.0.0.1:5173", # 개발 서버
 ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -188,7 +190,7 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Storage (S3 optional) ──
-AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
+AWS_S3_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
 AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
 AWS_QUERYSTRING_AUTH = True
 AWS_DEFAULT_ACL = None
@@ -201,7 +203,7 @@ if DEBUG and USE_S3 and not ALLOW_S3_IN_DEBUG:
     USE_S3 = False
 
 if USE_S3:
-    if not AWS_STORAGE_BUCKET_NAME:
+    if not AWS_S3_BUCKET_NAME:
         raise ImproperlyConfigured(
             "USE_S3=1 인 경우 AWS_S3_BUCKET_NAME이 필요합니다."
         )

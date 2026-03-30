@@ -32,7 +32,8 @@ class Product(models.Model):
 
     # 외부 링크
     product_url = models.URLField(
-        max_length=500
+        max_length=500,
+        unique=True
     )
 
     # 이미지 경로 (S3/외부 CDN/정적 URL)

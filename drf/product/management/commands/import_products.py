@@ -58,7 +58,7 @@ class Command(BaseCommand):
                     )
                 )
 
-        Product.objects.bulk_create(products, batch_size=1000)
+        Product.objects.bulk_create(products, batch_size=1000,ignore_conflicts=True)
 
         self.stdout.write(
             self.style.SUCCESS(f"Imported {len(products)} products")

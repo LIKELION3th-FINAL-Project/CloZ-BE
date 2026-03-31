@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import io
 import os
 from django.core.exceptions import ImproperlyConfigured
 
@@ -194,6 +195,8 @@ AWS_S3_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
 AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
 AWS_QUERYSTRING_AUTH = True
 AWS_DEFAULT_ACL = None
+AWS_STORAGE_BUCKET_NAME=os.getenv("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_ENDPOINT_URL=os.getenv("AWS_S3_ENDPOINT_URL")
 USE_S3 = os.getenv("USE_S3", "0" if DEBUG else "1") == "1"
 ALLOW_S3_IN_DEBUG = os.getenv("ALLOW_S3_IN_DEBUG", "0") == "1"
 
@@ -207,9 +210,22 @@ if USE_S3:
         raise ImproperlyConfigured(
             "USE_S3=1 인 경우 AWS_S3_BUCKET_NAME이 필요합니다."
         )
+    # OCI Object Storage는 chunked transfer encoding을 지원하지 않으므로
+    # 파일을 io.BytesIO로 래핑해 Content-Length를 확정한 뒤 업로드하도록 refactor.
+    from botocore.config import Config as BotocoreConfig
+    AWS_S3_CLIENT_CONFIG = BotocoreConfig(
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required",
+    )
+
+    from storages.backends.s3boto3 import S3Boto3Storage
+
+    class OciS3Storage(S3Boto3Storage):
+        pass
+
     STORAGES = {
         "default": {
-            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "BACKEND": "cloz.settings.OciS3Storage",
         },
         "staticfiles": {
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",

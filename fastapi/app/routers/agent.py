@@ -1,10 +1,15 @@
+import os
 import sys
 import json
+import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.database import get_session
 from app.image_utils import download_image_bytes_from_url
 from app.s3 import upload_generated_output
 from app.schemas.agent import AgentRequest, AgentResponse, OutfitInfo, ProductInfo
@@ -94,6 +99,51 @@ def _to_outfit_info(model_outfit, user_id: int, session_id: str) -> OutfitInfo:
     )
 
 
+async def _fetch_closet_from_db(user_id: int, session: AsyncSession) -> dict: 
+    
+    # closet_closet 테이블에서 사용자 옷장 아이템을 직접 조회회
+    # embedding_status = 'ONE이고 embedding이 있는 아이템만 반환됨
+    
+    result = await session.execute(
+        text("""
+            SELECT id, category, embedding::text, style_cat
+            FROM closet_closet
+            WHERE user_id = :user_id
+              AND embedding_status = 'DONE'
+              AND embedding IS NOT NULL
+        """),
+        {"user_id": user_id},
+    )
+    rows = result.fetchall()
+
+    closet_data: dict = {"TOP": [], "BOTTOM": [], "OUTER": []}
+    for row in rows:
+        closet_id, category, embedding_text, style_cat = row
+        try:
+            embedding = json.loads(embedding_text)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if not isinstance(embedding, list) or len(embedding) != 512:
+            continue
+        if category not in closet_data:
+            continue
+        closet_data[category].append({
+            "id": str(closet_id),
+            "image_url": "",
+            "style_cat": style_cat or "",
+            "embedding": embedding,
+        })
+
+    logger.info(
+        "[closet_db] user_id=%s → TOP=%d, BOTTOM=%d, OUTER=%d",
+        user_id,
+        len(closet_data["TOP"]),
+        len(closet_data["BOTTOM"]),
+        len(closet_data["OUTER"]),
+    )
+    return closet_data
+
+
 def _build_agent_prompt(req: AgentRequest) -> str:
     """
     UnderstandModel에 전달할 프롬프트를 구성한다.
@@ -133,7 +183,10 @@ def _interact_with_user_chat(understand_model, first_model_response: str) -> str
 
 
 @router.post("/agents/", response_model=AgentResponse)
-async def run_agent(req: AgentRequest):
+async def run_agent(
+    req: AgentRequest,
+    session: AsyncSession = Depends(get_session),
+): #closet 데이터 우선순위 로직 추가
     logger.info("에이전트 요청 시작")
     try:
         understand_model = get_understand_model()
@@ -160,28 +213,59 @@ async def run_agent(req: AgentRequest):
         logger.info("프론트 표시용 메시지: %s", message_text)
         generation_outfits = []
         generation_model = _get_generation_model()
-        generation_context = {}
+        tmp_body_image_path = None
 
-        if req.user.body_image_url and req.user.body_image_url.startswith("http"):
-            try:
-                generation_context["user_body_image_bytes"] = (
-                    await download_image_bytes_from_url(req.user.body_image_url)
-                )
-            except Exception as exc:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"body_image_url 다운로드 실패: {exc}",
-                ) from exc
+        # closet 데이터 준비:
+        # req.closet에 임베딩이 있으면 그걸 사용, 없으면 DB에서 직접 조회
+        req_items_with_emb = [
+            item
+            for items in [req.closet.TOP, req.closet.BOTTOM, req.closet.OUTER]
+            for item in items
+            if item.embedding
+        ]
+        if req_items_with_emb:
+            closet_data = {
+                scope: [item.model_dump() for item in items]
+                for scope, items in [
+                    ("TOP", req.closet.TOP),
+                    ("BOTTOM", req.closet.BOTTOM),
+                    ("OUTER", req.closet.OUTER),
+                ]
+                if items
+            }
+            logger.info("[closet] req에서 closet 사용 (아이템 수: %d)", len(req_items_with_emb))
+        else:
+            closet_data = await _fetch_closet_from_db(req.user.user_id, session)
 
-        # 요청에서 전달된 경로가 로컬 파일 경로면 동적으로 반영한다.
-        if req.user.body_image_url and not req.user.body_image_url.startswith("http"):
-            generation_model.config["user_body_image"] = req.user.body_image_url
+        generation_context: dict = {"closet_data": closet_data}
 
-        generation_result = generation_model.generate(
-            prompt=req.message,
-            user_id=str(req.user.user_id),
-            context=generation_context or None,
-        )
+        try:
+            if req.user.body_image_url:
+                if req.user.body_image_url.startswith("http"):
+                    try:
+                        image_bytes = await download_image_bytes_from_url(req.user.body_image_url)
+                    except Exception as exc:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"body_image_url 다운로드 실패: {exc}",
+                        ) from exc
+                    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+                        tmp.write(image_bytes)
+                        tmp_body_image_path = tmp.name
+                    generation_model.config["user_body_image"] = tmp_body_image_path
+                else:
+                    generation_model.config["user_body_image"] = req.user.body_image_url
+
+            has_closet = any(generation_context["closet_data"].values())
+            generation_result = generation_model.generate(
+                prompt=req.message,
+                user_id=str(req.user.user_id),
+                context=generation_context if has_closet else None,
+            )
+        finally:
+            if tmp_body_image_path and os.path.exists(tmp_body_image_path):
+                os.unlink(tmp_body_image_path)
+
         if generation_result.success and generation_result.outfits:
             generation_outfits = [
                 _to_outfit_info(

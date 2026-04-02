@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     AWS_S3_REGION_NAME: str = "ap-northeast-2"
     AWS_AUTH_MODE: str = "iam_role"  # auto | static | iam_role
     AWS_PRESIGNED_URL_EXPIRE_SECONDS: int = 3600
+    AWS_S3_ENDPOINT_URL: str = ""
 
     @property
     def celery_broker_url(self) -> str:

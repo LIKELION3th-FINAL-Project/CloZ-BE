@@ -28,8 +28,9 @@ def _resolve_local_output_path(local_path: str) -> Path:
 
 def get_s3_client():
     kwargs = {"region_name": settings.AWS_S3_REGION_NAME}
+    if settings.AWS_S3_ENDPOINT_URL:          
+        kwargs["endpoint_url"] = settings.AWS_S3_ENDPOINT_URL
     auth_mode = settings.AWS_AUTH_MODE.lower()
-
     if auth_mode == "static":
         kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID
         kwargs["aws_secret_access_key"] = settings.AWS_SECRET_ACCESS_KEY

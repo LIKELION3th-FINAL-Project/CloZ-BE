@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_session
 from app.image_utils import download_image_bytes_from_url
-from app.s3 import upload_generated_output
+from app.s3 import get_s3_client, upload_generated_output
 from app.schemas.agent import AgentRequest, AgentResponse, OutfitInfo, ProductInfo
 from app.state import get_clip_encoder, get_understand_model
 from generation_pipeline.understand_model.understand_model import (
@@ -106,7 +106,7 @@ async def _fetch_closet_from_db(user_id: int, session: AsyncSession) -> dict:
     
     result = await session.execute(
         text("""
-            SELECT id, category, embedding::text, style_cat
+            SELECT id, category, embedding::text, style_cat,image
             FROM closet_closet
             WHERE user_id = :user_id
               AND embedding_status = 'DONE'
@@ -118,7 +118,7 @@ async def _fetch_closet_from_db(user_id: int, session: AsyncSession) -> dict:
 
     closet_data: dict = {"TOP": [], "BOTTOM": [], "OUTER": []}
     for row in rows:
-        closet_id, category, embedding_text, style_cat = row
+        closet_id, category, embedding_text, style_cat, image = row
         try:
             embedding = json.loads(embedding_text)
         except (json.JSONDecodeError, TypeError):
@@ -129,7 +129,7 @@ async def _fetch_closet_from_db(user_id: int, session: AsyncSession) -> dict:
             continue
         closet_data[category].append({
             "id": str(closet_id),
-            "image_url": "",
+            "image_url": image or "",  # "closet_images/bottoms_5.jpeg" 형태로 채워짐
             "style_cat": style_cat or "",
             "embedding": embedding,
         })
@@ -236,6 +236,25 @@ async def run_agent(
             logger.info("[closet] req에서 closet 사용 (아이템 수: %d)", len(req_items_with_emb))
         else:
             closet_data = await _fetch_closet_from_db(req.user.user_id, session)
+        
+        # closet 이미지 S3 → 로컬 임시 파일 다운로드
+        tmp_closet_files: list = []
+        s3 = get_s3_client()
+        for scope_items in closet_data.values():
+            for item in scope_items:
+                s3_key = item.get("image_url", "")
+                if not s3_key:
+                    continue
+                try:
+                    suffix = Path(s3_key).suffix or ".jpg"
+                    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                        s3.download_fileobj(settings.AWS_S3_BUCKET_NAME, s3_key, tmp)
+                        item["image_url"] = tmp.name
+                        tmp_closet_files.append(tmp.name)
+                    logger.info("[closet] S3 다운로드: %s → %s", s3_key, item["image_url"])
+                except Exception as e:
+                    logger.warning("[closet] S3 다운로드 실패 (빈 경로로 진행): %s → %s", s3_key, e)
+                    item["image_url"] = ""
 
         generation_context: dict = {"closet_data": closet_data}
 
@@ -265,6 +284,9 @@ async def run_agent(
         finally:
             if tmp_body_image_path and os.path.exists(tmp_body_image_path):
                 os.unlink(tmp_body_image_path)
+            for p in tmp_closet_files:
+                if os.path.exists(p):
+                    os.unlink(p)
 
         if generation_result.success and generation_result.outfits:
             generation_outfits = [

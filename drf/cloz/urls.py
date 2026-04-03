@@ -19,8 +19,11 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from cloz.presigned_views import PresignedImageView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("api/images/presigned/", PresignedImageView.as_view()),
     path("api/users/", include("user.urls")),
     path("api/products/", include("product.urls")),
     path("api/closets/", include("closet.urls")),

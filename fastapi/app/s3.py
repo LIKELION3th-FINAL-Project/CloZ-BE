@@ -14,6 +14,7 @@ if settings.AWS_S3_ENDPOINT_URL:
     os.environ.setdefault("AWS_RESPONSE_CHECKSUM_VALIDATION", "when_required")
 
 import boto3
+from botocore.client import Config as BotoConfig
 from botocore.exceptions import BotoCoreError, ClientError
 from PIL import Image
 
@@ -39,6 +40,11 @@ def get_s3_client():
     kwargs = {"region_name": settings.AWS_S3_REGION_NAME}
     if settings.AWS_S3_ENDPOINT_URL:
         kwargs["endpoint_url"] = settings.AWS_S3_ENDPOINT_URL
+        # OCI S3 호환 가능한 presigned URL: DRF image_bridge와 동일한 주소 체계
+        kwargs["config"] = BotoConfig(
+            signature_version="s3v4",
+            s3={"addressing_style": "path"},
+        )
     auth_mode = settings.AWS_AUTH_MODE.lower()
     if auth_mode == "static":
         kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID

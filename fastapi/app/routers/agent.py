@@ -11,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_session
 from app.image_utils import download_image_bytes_from_url
-from app.s3 import get_s3_client, upload_generated_output
+from app.s3 import (
+    generate_presigned_image_url,
+    get_s3_client,
+    upload_generated_output,
+)
 from app.schemas.agent import AgentRequest, AgentResponse, OutfitInfo, ProductInfo
 from app.state import get_clip_encoder, get_understand_model
 from generation_pipeline.understand_model.understand_model import (
@@ -83,6 +87,16 @@ def _to_outfit_info(model_outfit, user_id: int, session_id: str) -> OutfitInfo:
         user_id=user_id,
         session_id=session_id,
     )
+    image_url = None
+    if image_key:
+        try:
+            image_url = generate_presigned_image_url(image_key)
+        except Exception as exc:
+            logger.warning(
+                "presigned URL 생성 실패 (image_key=%s): %s",
+                image_key,
+                exc,
+            )
     products = [
         ProductInfo(
             product_id=item.product_id,
@@ -95,6 +109,7 @@ def _to_outfit_info(model_outfit, user_id: int, session_id: str) -> OutfitInfo:
     return OutfitInfo(
         outfit_id=getattr(model_outfit, "outfit_id", 0),
         image_key=image_key,
+        image_url=image_url,
         products=products,
     )
 

@@ -45,6 +45,8 @@ class ProductInfo(BaseModel):
 class OutfitInfo(BaseModel):
     outfit_id: int
     image_key: str
+    # 브라우저 <img src>용 브라우저는 s3키가 아니라 get이 가능한 url필요 
+    image_url: Optional[str] = None
     products: list[ProductInfo]
 
 

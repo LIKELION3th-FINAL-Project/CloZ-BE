@@ -1,15 +1,24 @@
 import io
 import mimetypes
+import os
 import uuid
 from pathlib import Path
 from typing import Optional
+from app.config import settings
+
+# OCI S3 호환 업로드 오류(MissingContentLength) 방지
+# boto3 최신판은 기본 설정으로 요청 본문을 나눠 보낼 수 있는데 OCI는 지원하지 않음
+# boto3를 불러오기 전에 체크섬 환경 변수를 완화해서 단순한 PUT으로 올리게 함
+if settings.AWS_S3_ENDPOINT_URL:
+    os.environ.setdefault("AWS_REQUEST_CHECKSUM_CALCULATION", "when_required")
+    os.environ.setdefault("AWS_RESPONSE_CHECKSUM_VALIDATION", "when_required")
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 from PIL import Image
 
-from app.config import settings
-
+# 생성된 이미지(vton)를 버킷에 올리고 presigned url 생성 및 s3에서 이미지 읽기 
+# 즉 s3 접근 파일 
 
 def _resolve_local_output_path(local_path: str) -> Path:
     raw = Path(local_path)
@@ -28,7 +37,7 @@ def _resolve_local_output_path(local_path: str) -> Path:
 
 def get_s3_client():
     kwargs = {"region_name": settings.AWS_S3_REGION_NAME}
-    if settings.AWS_S3_ENDPOINT_URL:          
+    if settings.AWS_S3_ENDPOINT_URL:
         kwargs["endpoint_url"] = settings.AWS_S3_ENDPOINT_URL
     auth_mode = settings.AWS_AUTH_MODE.lower()
     if auth_mode == "static":
@@ -61,6 +70,7 @@ def upload_generated_image(image_bytes: bytes, user_id: int, session_id: str) ->
         Bucket=settings.AWS_S3_BUCKET_NAME,
         Key=image_key,
         Body=image_bytes,
+        ContentLength=len(image_bytes),
         ContentType="image/png",
     )
     return image_key
@@ -72,12 +82,18 @@ def upload_generated_file(local_path: str, user_id: int, session_id: str) -> str
     ext = path.suffix or ".png"
     content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     image_key = build_recommendation_image_key(user_id=user_id, session_id=session_id, extension=ext)
+    body = path.read_bytes()
+    if not body:
+        raise ValueError(f"빈 파일입니다: {path}")
+
     client = get_s3_client()
-    client.upload_file(
-        Filename=str(path),
+    # OCI S3 호환 API는 Content-Length 미전달 시 MissingContentLength를 반환할 수 있음
+    client.put_object(
         Bucket=settings.AWS_S3_BUCKET_NAME,
         Key=image_key,
-        ExtraArgs={"ContentType": content_type},
+        Body=body,
+        ContentLength=len(body),
+        ContentType=content_type,
     )
     return image_key
 

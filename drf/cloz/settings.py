@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 import io
 import os
 from django.core.exceptions import ImproperlyConfigured
@@ -111,6 +112,32 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ),
 }
+# 토큰 수명 수명 늘리기 <- simplejwt 적용용
+if DEBUG:
+    _jwt_access = timedelta(
+        hours=int(os.getenv("JWT_ACCESS_HOURS", "3")),
+    )
+    _jwt_refresh = timedelta(
+        days=int(os.getenv("JWT_REFRESH_DAYS", "30")),
+    )
+else:
+    _jwt_access = timedelta(
+        minutes=int(os.getenv("JWT_ACCESS_MINUTES", "15")),
+    )
+    _jwt_refresh = timedelta(
+        days=int(os.getenv("JWT_REFRESH_DAYS", "7")),
+    )
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": _jwt_access,
+    "REFRESH_TOKEN_LIFETIME": _jwt_refresh,
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "UPDATE_LAST_LOGIN": False,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
@@ -197,6 +224,12 @@ AWS_QUERYSTRING_AUTH = True
 AWS_DEFAULT_ACL = None
 AWS_STORAGE_BUCKET_NAME=os.getenv("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_ENDPOINT_URL=os.getenv("AWS_S3_ENDPOINT_URL")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+# image_bridge, 프론트 presigned API와 FastAPI app.s3 ttl 맞추기 위한 초초
+AWS_PRESIGNED_URL_EXPIRE_SECONDS = int(
+    os.getenv("AWS_PRESIGNED_URL_EXPIRE_SECONDS", "3600")
+)
 USE_S3 = os.getenv("USE_S3", "0" if DEBUG else "1") == "1"
 ALLOW_S3_IN_DEBUG = os.getenv("ALLOW_S3_IN_DEBUG", "0") == "1"
 

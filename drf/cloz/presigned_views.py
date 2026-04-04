@@ -19,7 +19,7 @@ def _presigned_ttl() -> int:
 
 
 class PresignedImageView(APIView):
-    # fastapi가 반환한 S3 image_key를 브라우저용 presigned get url로로 바꿔준다. <- 브라우저는 s3키가 아니라 get이 가능한 url필요 
+    # fastapi가 반환한 S3 image_key를 브라우저용 presigned get url로로 바꿔준다. <- 브라우저는 s3키가 아니라 get이 가능한 url필요
 
     permission_classes = [IsAuthenticated]
 
@@ -48,4 +48,3 @@ class PresignedImageView(APIView):
             )
 
         return Response({"image_url": url, "image_key": image_key})
-
